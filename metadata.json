@@ -1,0 +1,6 @@
+{
+  "name": "World Dungeon: Crawl or Die",
+  "description": "A 50-floor dungeon crawler inspired by Dungeon Crawler Carl. Manage stats, gear, and skills while fighting against a ticking clock to find the stairs. Don't let the AI announcer get bored.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

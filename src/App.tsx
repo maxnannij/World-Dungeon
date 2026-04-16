@@ -95,15 +95,17 @@ export default function App() {
       });
 
       // Passive Regeneration (Every second)
-      setPlayer(prev => {
-        const hpRegen = 0.5; // Very slow
-        const mpRegen = 0.2;
-        return {
-          ...prev,
-          hp: Math.min(prev.maxHp, prev.hp + hpRegen),
-          mp: Math.min(prev.maxMp, prev.mp + mpRegen)
-        };
-      });
+      if (!combatEnemy) {
+        setPlayer(prev => {
+          const hpRegen = 0.5; // Very slow
+          const mpRegen = 0.2;
+          return {
+            ...prev,
+            hp: Math.min(prev.maxHp, prev.hp + hpRegen),
+            mp: Math.min(prev.maxMp, prev.mp + mpRegen)
+          };
+        });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -418,6 +420,18 @@ export default function App() {
     addLog(`Equipped ${item.name}`, 'SYSTEM');
   };
 
+  const unequipItem = (slot: keyof Player['equipment']) => {
+    setPlayer(prev => {
+      const item = prev.equipment[slot];
+      if (!item) return prev;
+      addLog(`Unequipped ${item.name}`, 'SYSTEM');
+      return {
+        ...prev,
+        equipment: { ...prev.equipment, [slot]: null }
+      };
+    });
+  };
+
   if (gameState === 'MENU') {
     return (
       <div className="min-h-screen bg-dungeon-bg p-8 flex flex-col items-center justify-center overflow-hidden relative font-sans">
@@ -476,24 +490,24 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-dungeon-bg text-dungeon-text font-sans p-5 gap-4 flex flex-col max-h-screen overflow-hidden">
+    <div className="min-h-screen bg-dungeon-bg text-dungeon-text font-sans p-2 md:p-5 gap-4 flex flex-col h-screen max-h-screen overflow-hidden">
       <div className="scanline" />
       
       {/* HEADER GRID */}
-      <header className="grid grid-cols-[1fr_200px_1fr] gap-5 items-center z-20">
-        <div className="bg-dungeon-surface border-2 border-dungeon-accent p-3 px-5 rounded-lg">
-          <h1 className="text-[10px] uppercase tracking-[2px] text-dungeon-accent mb-1 font-bold">Floor Progress</h1>
-          <p className="text-2xl font-bold text-white uppercase italic">Floor {floor.number}: The Meat Grinder</p>
+      <header className="flex flex-col md:grid md:grid-cols-[1fr_200px_1fr] gap-3 md:gap-5 items-center z-20 shrink-0">
+        <div className="w-full bg-dungeon-surface border-2 border-dungeon-accent p-2 md:p-3 px-5 rounded-lg flex md:block items-center justify-between gap-4">
+          <h1 className="text-[10px] uppercase tracking-[2px] text-dungeon-accent font-bold">Floor Progress</h1>
+          <p className="text-xl md:text-2xl font-bold text-white uppercase italic">Floor {floor.number}</p>
         </div>
 
-        <div className="bg-[#2a0a0a] border-2 border-dungeon-pink rounded-lg p-3 text-center shadow-[0_0_15px_rgba(248,81,73,0.2)]">
-          <div className="text-[10px] text-dungeon-pink uppercase font-bold mb-1">Stairwell Deadline</div>
-          <div className="font-mono text-3xl font-bold text-white">
+        <div className="w-full bg-[#2a0a0a] border-2 border-dungeon-pink rounded-lg p-2 md:p-3 text-center shadow-[0_0_15px_rgba(248,81,73,0.2)]">
+          <div className="text-[10px] text-dungeon-pink uppercase font-bold mb-0.5">Stairwell Deadline</div>
+          <div className="font-mono text-xl md:text-3xl font-bold text-white">
             {Math.floor(floor.timer / 60).toString().padStart(2, '0')}:{(floor.timer % 60).toString().padStart(2, '0')}
           </div>
         </div>
 
-        <div className="flex flex-col justify-center gap-2">
+        <div className="w-full flex flex-col justify-center gap-1.5 md:gap-2">
           {/* HP Bar */}
           <div className="flex flex-col">
             <div className="flex justify-between text-[9px] text-dungeon-pink font-bold uppercase tracking-wider mb-0.5">
@@ -544,10 +558,10 @@ export default function App() {
       </header>
 
       {/* MAIN BENTO GRID */}
-      <main className="flex-1 grid grid-cols-[280px_1fr_300px] grid-rows-[1fr_200px] gap-4 overflow-hidden">
+      <main className="flex-1 flex flex-col md:grid md:grid-cols-[280px_1fr_300px] md:grid-rows-[1fr_200px] gap-4 overflow-y-auto md:overflow-hidden pb-20 md:pb-0">
         
-        {/* STATS & SKILLS (Left) */}
-        <div className="bento-card overflow-y-auto">
+        {/* STATS & SKILLS (Left) - Order 2 on mobile */}
+        <div className="order-2 md:order-1 bento-card overflow-y-auto min-h-[400px] md:min-h-0">
           <div className="bento-card-header">Vitals & Status</div>
           <div className="space-y-3 mb-6 bg-dungeon-bg/30 p-3 rounded-lg border border-dungeon-border/50">
              <div className="space-y-1">
@@ -647,8 +661,8 @@ export default function App() {
           )}
         </div>
 
-        {/* COMBAT VIEWPORT / MAP (Middle) */}
-        <div className="bento-card combat-viewport bg-[radial-gradient(circle_at_center,#1c2128_0%,#0d1117_100%)] flex items-center justify-center relative border-dungeon-accent/30 overflow-hidden">
+        {/* COMBAT VIEWPORT / MAP (Middle) - Order 1 on mobile */}
+        <div className="order-1 md:order-2 bento-card combat-viewport bg-[radial-gradient(circle_at_center,#1c2128_0%,#0d1117_100%)] flex items-center justify-center relative border-dungeon-accent/30 overflow-hidden min-h-[350px] md:min-h-0">
           <AnimatePresence mode="wait">
             {combatEnemy ? (
               <motion.div 
@@ -753,25 +767,37 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        {/* EQUIPMENT & INVENTORY (Right) */}
-        <div className="bento-card overflow-y-auto">
+        {/* EQUIPMENT & INVENTORY (Right) - Order 3 on mobile */}
+        <div className="order-3 md:order-3 bento-card overflow-y-auto min-h-[400px] md:min-h-0">
           <div className="bento-card-header">Current Equipment</div>
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] ${player.equipment.weapon ? 'border-dungeon-accent' : 'border-dungeon-border opacity-50'}`}>
+            <div 
+              onClick={() => unequipItem('weapon')}
+              className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] cursor-pointer transition-all hover:bg-dungeon-pink/10 ${player.equipment.weapon ? 'border-dungeon-accent' : 'border-dungeon-border opacity-50'}`}
+            >
               <div className="font-bold text-white mb-1">WEAPON</div>
               <div className="text-dungeon-accent font-bold truncate w-full">{player.equipment.weapon?.name || 'Empty'}</div>
+              {player.equipment.weapon && <div className="text-[7px] text-dungeon-pink mt-1 italic">Click to Unequip</div>}
             </div>
-            <div className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] ${player.equipment.armor ? 'border-dungeon-accent' : 'border-dungeon-border opacity-50'}`}>
+            <div 
+              onClick={() => unequipItem('armor')}
+              className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] cursor-pointer transition-all hover:bg-dungeon-pink/10 ${player.equipment.armor ? 'border-dungeon-accent' : 'border-dungeon-border opacity-50'}`}
+            >
               <div className="font-bold text-white mb-1">CHEST</div>
               <div className="text-dungeon-accent font-bold truncate w-full">{player.equipment.armor?.name || 'Empty'}</div>
+              {player.equipment.armor && <div className="text-[7px] text-dungeon-pink mt-1 italic">Click to Unequip</div>}
             </div>
-            <div className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] ${player.equipment.accessory ? 'border-dungeon-accent' : 'border-dungeon-border opacity-50'}`}>
+            <div className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] border-dungeon-border opacity-50`}>
               <div className="font-bold text-white mb-1">FEET</div>
               <div className="text-dungeon-accent font-bold truncate w-full">Barefoot</div>
             </div>
-            <div className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] ${player.equipment.accessory ? 'border-dungeon-gold' : 'border-dungeon-border opacity-50'}`}>
+            <div 
+              onClick={() => unequipItem('accessory')}
+              className={`aspect-square bg-[#0d1117] border rounded-lg flex flex-col items-center justify-center p-2 text-center text-[9px] cursor-pointer transition-all hover:bg-dungeon-pink/10 ${player.equipment.accessory ? 'border-dungeon-gold' : 'border-dungeon-border opacity-50'}`}
+            >
               <div className="font-bold text-white mb-1">ACCESSORY</div>
               <div className="text-dungeon-gold font-bold truncate w-full">{player.equipment.accessory?.name || 'None'}</div>
+              {player.equipment.accessory && <div className="text-[7px] text-dungeon-pink mt-1 italic">Click to Unequip</div>}
             </div>
           </div>
 
@@ -795,8 +821,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* SYSTEM CONSOLE LOGS (Bottom Row - Spans 3 Cols) */}
-        <div className="bento-card bento-grid col-span-3 !grid-cols-1 !grid-rows-1 !p-0 bg-[#0d1117] overflow-hidden">
+        {/* SYSTEM CONSOLE LOGS (Bottom Row) */}
+        <div className="order-4 md:order-4 bento-card bento-grid col-span-1 md:col-span-3 !grid-cols-1 !grid-rows-1 !p-0 bg-[#0d1117] overflow-hidden min-h-[200px]">
           <div className="bento-card-header !m-0 !p-3 bg-dungeon-surface">System Console Status <span>[ONLINE]</span></div>
           <div className="flex-1 overflow-y-auto p-4 flex flex-col-reverse gap-2 font-mono text-[11px] leading-relaxed">
             <AnimatePresence mode="popLayout">

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Cuartel Oscuro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-20">
+  <div class="max-w-md mx-auto">
+
+    <!-- HEADER -->
+    <header class="bg-zinc-900 border-b border-zinc-800 p-4 flex justify-between items-center sticky top-0 z-50">
+      <div class="flex items-center gap-2">
+        <button onclick="toggleMenu()" class="text-2xl">☰</button>
+        <h1 id="title" class="text-xl font-bold">Cuartel General</h1>
+      </div>
+      <div class="flex gap-3 text-sm">
+        <div class="flex items-center gap-1">
+          <span class="text-blue-400">◆</span> <span id="gems">15</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-zinc-400">⚔</span> <span id="silver">2</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-amber-500">●</span> <span id="gold">78</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main id="main-content" class="p-4 min-h-[calc(100vh-140px)]"></main>
+
+    <!-- BOTTOM NAV -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-900 border-t border-zinc-800 flex text-xs">
+      <button onclick="changeTab(0)" class="flex-1 py-3 flex flex-col items-center tab-btn active" id="tab-0">
+        🏰 <span class="mt-1">Cuartel</span>
+      </button>
+      <button onclick="changeTab(1)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-1">
+        🧙 <span class="mt-1">Héroes</span>
+      </button>
+      <button onclick="changeTab(2)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-2">
+        🗡️ <span class="mt-1">Dungeons</span>
+      </button>
+      <button onclick="changeTab(3)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-3">
+        ⚡ <span class="mt-1">Incursiones</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.tab-btn {
+  color: #71717a;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  color: #eab308;
+  border-top: 3px solid #eab308;
+}
+
+.pixel {
+  image-rendering: pixelated;
+}
+
+/* Modal */
+.modal {
+  animation: modalPop 0.3s ease;
+}
+@keyframes modalPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

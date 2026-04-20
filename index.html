@@ -7,25 +7,19 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-20">
+<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-20 font-sans">
   <div class="max-w-md mx-auto">
 
     <!-- HEADER -->
     <header class="bg-zinc-900 border-b border-zinc-800 p-4 flex justify-between items-center sticky top-0 z-50">
       <div class="flex items-center gap-2">
-        <button onclick="toggleMenu()" class="text-2xl">☰</button>
-        <h1 id="title" class="text-xl font-bold">Cuartel General</h1>
+        <button onclick="toggleMenu()" class="text-3xl">☰</button>
+        <h1 id="title" class="text-2xl font-bold">Cuartel General</h1>
       </div>
-      <div class="flex gap-3 text-sm">
-        <div class="flex items-center gap-1">
-          <span class="text-blue-400">◆</span> <span id="gems">15</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <span class="text-zinc-400">⚔</span> <span id="silver">2</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <span class="text-amber-500">●</span> <span id="gold">78</span>
-        </div>
+      <div class="flex gap-3 text-sm font-mono">
+        <div class="flex items-center gap-1"><span class="text-blue-400">◆</span> <span id="gems">15</span></div>
+        <div class="flex items-center gap-1"><span class="text-zinc-400">⚔</span> <span id="silver">2</span></div>
+        <div class="flex items-center gap-1"><span class="text-amber-500">●</span> <span id="gold">78</span></div>
       </div>
     </header>
 
@@ -34,21 +28,426 @@
 
     <!-- BOTTOM NAV -->
     <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-900 border-t border-zinc-800 flex text-xs">
-      <button onclick="changeTab(0)" class="flex-1 py-3 flex flex-col items-center tab-btn active" id="tab-0">
-        🏰 <span class="mt-1">Cuartel</span>
-      </button>
-      <button onclick="changeTab(1)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-1">
-        🧙 <span class="mt-1">Héroes</span>
-      </button>
-      <button onclick="changeTab(2)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-2">
-        🗡️ <span class="mt-1">Dungeons</span>
-      </button>
-      <button onclick="changeTab(3)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-3">
-        ⚡ <span class="mt-1">Incursiones</span>
-      </button>
+      <button onclick="changeTab(0)" class="flex-1 py-3 flex flex-col items-center tab-btn active" id="tab-0">🏰 <span class="mt-1">Cuartel</span></button>
+      <button onclick="changeTab(1)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-1">🧙 <span class="mt-1">Héroes</span></button>
+      <button onclick="changeTab(2)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-2">🗡️ <span class="mt-1">Dungeons</span></button>
+      <button onclick="changeTab(3)" class="flex-1 py-3 flex flex-col items-center tab-btn" id="tab-3">⚡ <span class="mt-1">Incursiones</span></button>
     </nav>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    // ==================== DATOS DEL JUEGO (TODO LIMPIO) ====================
+    let gameData = {
+      gems: 15,
+      silver: 2,
+      gold: 120,
+      currentTab: 0,
+      prestige: 0,
+      almasEternas: 0,
+      lastTabernaClaim: Date.now() - 1000 * 60 * 60 * 23, // casi listo para primer héroe
+
+      buildings: {
+        cuartel: { level: 1, slots: 2 },
+        taberna: { level: 1 },
+        almacenamiento: { level: 1, dropBonus: 1 },
+        mercado: { level: 1 },
+        taller: { level: 1 },
+        refugio: { level: 1, slots: 2 }
+      },
+
+      // TEAM VACÍO - primer héroe solo desde Taberna
+      heroes: [],
+
+      inventory: [],
+
+      itemsDB: [
+        { id: 1, name: "Espada de Hierro", slot: "arma", rarity: "Común", powerBonus: 12, costGold: 80, costIron: 15 },
+        { id: 2, name: "Casco de Cuero", slot: "cabeza", rarity: "Común", powerBonus: 8, costGold: 55, costWood: 25 },
+        { id: 3, name: "Bastón Arcano", slot: "arma", rarity: "Raro", powerBonus: 22, costGold: 220, costCopper: 40 },
+        { id: 4, name: "Armadura de Placas", slot: "pecho", rarity: "Raro", powerBonus: 18, costGold: 180, costIron: 35 }
+      ],
+
+      dungeons: [
+        { id: 1, name: "Jungla Primigenia", progress: 0, max: 150, unlocked: true, bossDefeated: false, enemyType: "slime", currentEnemies: [] },
+        { id: 2, name: "Cripta Olvidada", progress: 0, max: 150, unlocked: false, bossDefeated: false, enemyType: "esqueleto", currentEnemies: [] },
+        { id: 3, name: "Templo Egipcio", progress: 0, max: 150, unlocked: false, bossDefeated: false, enemyType: "mummy", currentEnemies: [] }
+      ],
+
+      mascotas: [],
+
+      materials: { madera: 45, cobre: 23, hierro: 12, oroMat: 5 },
+
+      lastSave: Date.now(),
+
+      // NUEVO: combate activo
+      currentCombatDungeonId: null,
+      combatLog: [],
+      activeTeam: [],           // IDs de héroes que están peleando en el dungeon actual
+      combatInterval: null
+    };
+
+    // ==================== FUNCIONES BÁSICAS ====================
+    function saveGame() {
+      gameData.lastSave = Date.now();
+      localStorage.setItem("dungeonIdleSave", JSON.stringify(gameData));
+    }
+
+    function loadGame() {
+      const saved = localStorage.getItem("dungeonIdleSave");
+      if (saved) gameData = JSON.parse(saved);
+      renderAll();
+    }
+
+    function changeTab(tab) {
+      gameData.currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === tab));
+      renderAll();
+    }
+
+    function renderAll() {
+      const main = document.getElementById("main-content");
+      main.innerHTML = "";
+
+      if (gameData.currentTab === 0) renderCuartel(main);
+      else if (gameData.currentTab === 1) renderHeroes(main);
+      else if (gameData.currentTab === 2) renderDungeons(main);
+      else if (gameData.currentTab === 3) renderIncursiones(main);
+
+      document.getElementById("gems").textContent = gameData.gems;
+      document.getElementById("silver").textContent = gameData.silver;
+      document.getElementById("gold").textContent = gameData.gold;
+    }
+
+    // ==================== CUARTEL (limpio) ====================
+    function renderCuartel(container) {
+      let html = `<h2 class="text-2xl font-bold mb-6">Cuartel General</h2>`;
+
+      const list = [
+        { key: "cuartel", icon: "🏰", name: "CUARTELES", desc: `${gameData.heroes.length}/${gameData.buildings.cuartel.slots} héroes` },
+        { key: "taberna", icon: "🍺", name: "TABERNA", desc: "Reclutar nuevo héroe" },
+        { key: "almacenamiento", icon: "📦", name: "ALMACENAMIENTO", desc: `${Object.values(gameData.materials).reduce((a,b)=>a+b)}` },
+        { key: "mercado", icon: "🛒", name: "MERCADO", desc: "Comprar / Vender" },
+        { key: "taller", icon: "🔨", name: "TALLER", desc: "Crafting" },
+        { key: "refugio", icon: "🐾", name: "REFUGIO", desc: `${gameData.mascotas.length}/${gameData.buildings.refugio.slots}` }
+      ];
+
+      list.forEach(b => {
+        html += `
+          <div onclick="openBuilding('${b.key}')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-2xl p-4 mb-4 flex gap-4 cursor-pointer">
+            <div class="w-14 h-14 bg-zinc-800 rounded-2xl flex items-center justify-center text-4xl">${b.icon}</div>
+            <div class="flex-1">
+              <div class="font-bold">${b.name}</div>
+              <div class="text-zinc-400 text-sm">${b.desc}</div>
+            </div>
+          </div>`;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function openBuilding(key) {
+      if (key === "taberna") recruitHero();
+      else if (key === "mercado") showMercadoModal();
+      else if (key === "taller") showTallerModal();
+      else if (key === "refugio") showRefugioModal();
+      else alert("Mejorar edificio próximamente");
+    }
+
+    // ==================== TABERNA - Primer héroe ====================
+    function recruitHero() {
+      const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - gameData.lastTabernaClaim);
+      if (timeLeft > 0) {
+        alert("⏳ La taberna aún está preparando un nuevo héroe...");
+        return;
+      }
+      if (gameData.heroes.length >= gameData.buildings.cuartel.slots) {
+        alert("❌ Cuartel lleno. Mejoralo primero.");
+        return;
+      }
+
+      const nombres = ["Guardia", "Clérigo", "Tirador", "Mago Fuego", "Arquero"];
+      const clases = ["Guerrero", "Sanador", "Tirador", "Mago", "Cazador"];
+      const nuevo = {
+        id: Date.now(),
+        name: nombres[Math.floor(Math.random() * nombres.length)],
+        class: clases[Math.floor(Math.random() * clases.length)],
+        level: 5,
+        rarity: "Común",
+        power: 35,
+        img: `assets/heroes/${Math.random() > 0.5 ? 'guardia' : 'clerigo'}.png`,
+        equipped: { arma: null, cabeza: null, pecho: null, manoSec: null, guantes: null, piernas: null, pies: null }
+      };
+
+      gameData.heroes.push(nuevo);
+      gameData.lastTabernaClaim = Date.now();
+      saveGame();
+      renderAll();
+      alert(`¡${nuevo.name} se unió al equipo!`);
+    }
+
+    // ==================== HÉROES ====================
+    function renderHeroes(container) {
+      let html = `<h2 class="text-2xl font-bold mb-6">Aventureros (${gameData.heroes.length}/${gameData.buildings.cuartel.slots})</h2>`;
+      if (gameData.heroes.length === 0) {
+        html += `<div class="text-center py-12 text-zinc-400">Aún no tienes héroes.<br>Ve a la Taberna a reclutar el primero.</div>`;
+      } else {
+        gameData.heroes.forEach(h => {
+          html += `
+            <div onclick="showHeroModal(${h.id})" class="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 flex gap-4 mb-4 cursor-pointer">
+              <img src="${h.img}" class="w-16 h-16 object-contain pixel rounded-xl" onerror="this.src='https://via.placeholder.com/64?text=${h.name}'">
+              <div class="flex-1">
+                <div class="font-bold">${h.name}</div>
+                <div class="text-emerald-400">${h.class} • Nivel ${h.level}</div>
+                <div class="text-yellow-400">Poder: ${h.power}</div>
+              </div>
+            </div>`;
+        });
+      }
+      container.innerHTML = html;
+    }
+
+    function showHeroModal(id) {
+      const hero = gameData.heroes.find(h => h.id === id);
+      let html = `<div class="fixed inset-0 bg-black/90 flex items-end z-50"><div class="bg-zinc-900 w-full rounded-t-3xl p-6 max-h-[90vh] overflow-auto">`;
+      html += `<div class="flex justify-between"><h2 class="text-3xl font-bold">${hero.name}</h2><button onclick="closeModal()" class="text-4xl">✕</button></div>`;
+      html += `<img src="${hero.img}" class="w-28 h-28 mx-auto pixel my-6" onerror="this.src='https://via.placeholder.com/128?text=${hero.name}'">`;
+      html += `<p class="text-center text-emerald-400">${hero.class} • Poder ${hero.power}</p>`;
+
+      // 7 slots
+      const slots = ["arma","cabeza","pecho","manoSec","guantes","piernas","pies"];
+      html += `<div class="grid grid-cols-2 gap-3 mt-8">`;
+      slots.forEach(s => {
+        const item = hero.equipped[s];
+        html += `<div class="bg-zinc-800 p-3 rounded-2xl text-center"><div class="text-4xl mb-1">${item ? '✅' : '⬜'}</div><div class="text-sm">${s}</div><div class="text-xs text-yellow-400">${item ? item.name : 'Vacío'}</div></div>`;
+      });
+      html += `</div><button onclick="closeModal()" class="w-full mt-8 bg-zinc-700 py-4 rounded-3xl">Cerrar</button></div></div>`;
+      document.getElementById("main-content").innerHTML += html;
+    }
+
+    // ==================== DUNGEONS - Solo avanzan cuando cargas equipo ====================
+    function renderDungeons(container) {
+      let html = `<h2 class="text-2xl font-bold mb-6">Dungeons</h2>`;
+      gameData.dungeons.forEach(d => {
+        const percent = Math.floor((d.progress / d.max) * 100);
+        html += `
+          <div onclick="${d.unlocked ? `enterDungeon(${d.id})` : ''}" class="bg-zinc-900 border ${d.unlocked ? 'border-lime-400' : 'border-zinc-700 opacity-60'} rounded-3xl p-5 mb-4 cursor-pointer">
+            <div class="font-bold">${d.name}</div>
+            <div class="h-3 bg-zinc-800 rounded-full mt-3 overflow-hidden">
+              <div class="h-3 bg-lime-400 transition-all" style="width: ${percent}%"></div>
+            </div>
+            <div class="text-xs mt-2 flex justify-between">
+              <span>${d.progress}/${d.max}</span>
+              <span class="text-lime-400">${d.bossDefeated ? '✅ Completado' : d.progress > 0 ? 'En progreso' : 'Listo para empezar'}</span>
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function enterDungeon(dungeonId) {
+      const dungeon = gameData.dungeons.find(d => d.id === dungeonId);
+      if (!dungeon) return;
+
+      // Solo avanza si hay equipo cargado
+      if (gameData.activeTeam.length === 0) {
+        selectTeamForDungeon(dungeonId);
+        return;
+      }
+
+      // Abrir vista de combate EXACTA como en la imagen que mandaste
+      openCombatView(dungeon);
+    }
+
+    function selectTeamForDungeon(dungeonId) {
+      let html = `<div class="fixed inset-0 bg-black/90 flex items-end z-50"><div class="bg-zinc-900 w-full rounded-t-3xl p-6">`;
+      html += `<h2 class="text-2xl font-bold mb-4">Cargar equipo para ${gameData.dungeons.find(d=>d.id===dungeonId).name}</h2>`;
+      html += `<p class="text-zinc-400 mb-6">Elige hasta ${gameData.buildings.cuartel.slots} héroes</p>`;
+
+      gameData.heroes.forEach(h => {
+        html += `
+          <div onclick="toggleHeroInTeam(${h.id}, ${dungeonId})" class="flex items-center gap-4 bg-zinc-800 p-4 rounded-2xl mb-3 cursor-pointer">
+            <img src="${h.img}" class="w-12 h-12 pixel rounded-xl" onerror="this.src='https://via.placeholder.com/48?text=${h.name}'">
+            <div class="flex-1">${h.name} <span class="text-xs text-emerald-400">${h.class}</span></div>
+            <div class="text-2xl ${gameData.activeTeam.includes(h.id) ? 'text-lime-400' : 'text-zinc-500'}">✓</div>
+          </div>`;
+      });
+
+      html += `<button onclick="startDungeonAfterTeam(${dungeonId})" class="w-full mt-8 bg-lime-500 hover:bg-lime-400 py-5 rounded-3xl font-bold text-xl">COMENZAR DUNGEON</button>`;
+      html += `<button onclick="closeModal()" class="w-full mt-4 bg-zinc-700 py-4 rounded-3xl">Cancelar</button></div></div>`;
+      document.getElementById("main-content").innerHTML += html;
+    }
+
+    function toggleHeroInTeam(heroId, dungeonId) {
+      // lógica simple: toggle en activeTeam
+      const idx = gameData.activeTeam.indexOf(heroId);
+      if (idx > -1) gameData.activeTeam.splice(idx, 1);
+      else if (gameData.activeTeam.length < gameData.buildings.cuartel.slots) gameData.activeTeam.push(heroId);
+      // re-render modal (simple alert para no complicar)
+      closeModal();
+      selectTeamForDungeon(dungeonId);
+    }
+
+    function startDungeonAfterTeam(dungeonId) {
+      if (gameData.activeTeam.length === 0) {
+        alert("Debes seleccionar al menos un héroe");
+        return;
+      }
+      closeModal();
+      const dungeon = gameData.dungeons.find(d => d.id === dungeonId);
+      dungeon.currentEnemies = ["No Muerto", "Sabueso de la Muerte", "Arquero No Muerto", "Lobo Sombrío"]; // ejemplo como en tu imagen
+      openCombatView(dungeon);
+    }
+
+    // ==================== VISTA DE COMBATE (exacta como tu imagen) ====================
+    function openCombatView(dungeon) {
+      gameData.currentCombatDungeonId = dungeon.id;
+      gameData.combatLog = [
+        "La batalla comenzó...",
+        "Semilla flotante curó 2 HP a Clérigo"
+      ];
+
+      let html = `
+        <div class="fixed inset-0 bg-zinc-950 z-50 flex flex-col">
+          <!-- Header -->
+          <div class="bg-zinc-900 p-4 flex justify-between items-center">
+            <h2 class="text-xl font-bold">${dungeon.name}</h2>
+            <button onclick="retirarDungeon()" class="text-red-400">RETIRADA</button>
+          </div>
+
+          <!-- Imagen de fondo + enemigos + héroes -->
+          <div class="flex-1 p-4 relative overflow-hidden" style="background: linear-gradient(to bottom, #1a2333, #2c1f2e);">
+            <!-- Placeholder fondo (usa tu propia imagen) -->
+            <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,#1e2937_1px)] bg-[length:20px_20px] opacity-30"></div>
+            
+            <!-- Enemigos (arriba) -->
+            <div class="flex justify-around mb-8 relative z-10">
+              ${dungeon.currentEnemies.map((e, i) => `
+                <div class="text-center">
+                  <div class="text-5xl mb-1">🪦</div>
+                  <div class="text-xs font-bold text-red-300">${e}</div>
+                  <div class="w-16 h-2 bg-red-900 rounded mx-auto mt-2"><div class="h-2 bg-red-400 w-4/5 rounded"></div></div>
+                </div>`).join('')}
+            </div>
+
+            <!-- Héroes (abajo) -->
+            <div class="flex justify-around relative z-10">
+              ${gameData.activeTeam.map(id => {
+                const hero = gameData.heroes.find(h => h.id === id);
+                return hero ? `
+                  <div class="text-center">
+                    <img src="${hero.img}" class="w-16 h-16 mx-auto pixel rounded-xl mb-1" onerror="this.src='https://via.placeholder.com/64?text=${hero.name}'">
+                    <div class="text-xs font-bold text-lime-300">${hero.name}</div>
+                    <div class="w-16 h-2 bg-blue-900 rounded mx-auto mt-2"><div class="h-2 bg-blue-400 w-5/6 rounded"></div></div>
+                  </div>` : '';
+              }).join('')}
+            </div>
+
+            <!-- Combat Log -->
+            <div id="combat-log" class="absolute bottom-4 left-4 right-4 bg-black/70 text-xs max-h-52 overflow-y-auto p-3 rounded-2xl border border-zinc-700 text-zinc-300 font-mono leading-tight">
+              ${gameData.combatLog.map(line => `<div class="mb-1">${line}</div>`).join('')}
+            </div>
+          </div>
+
+          <!-- Barra de progreso del dungeon -->
+          <div class="px-4 py-3 bg-zinc-900 border-t border-zinc-700">
+            <div class="text-xs text-zinc-400 mb-1">Progreso del dungeon</div>
+            <div class="h-2.5 bg-zinc-800 rounded-full"><div class="h-2.5 bg-gradient-to-r from-lime-400 to-yellow-400 rounded-full" style="width: ${Math.floor((dungeon.progress / dungeon.max) * 100)}%"></div></div>
+            <div class="flex justify-between text-xs mt-1"><span>${dungeon.progress}/${dungeon.max}</span><span class="text-lime-400">Idle activo</span></div>
+          </div>
+
+          <button onclick="closeCombatView()" class="mx-4 mb-4 bg-zinc-700 py-4 rounded-3xl text-lg font-bold">CERRAR</button>
+        </div>`;
+
+      document.getElementById("main-content").innerHTML += html;
+
+      // Iniciar combate idle
+      if (gameData.combatInterval) clearInterval(gameData.combatInterval);
+      gameData.combatInterval = setInterval(() => simulateCombatRound(dungeon), 1800);
+    }
+
+    function simulateCombatRound(dungeon) {
+      if (!gameData.currentCombatDungeonId) return;
+
+      // Avance del dungeon
+      dungeon.progress = Math.min(dungeon.progress + 2, dungeon.max);
+      if (dungeon.progress >= dungeon.max && !dungeon.bossDefeated) {
+        dungeon.bossDefeated = true;
+        addToCombatLog("¡BOSS DERROTADO! Dungeon completada.");
+        clearInterval(gameData.combatInterval);
+      }
+
+      // Simular log como en tu imagen
+      const logs = [
+        "No Muerto atacó a Mago Fuego, pero fue esquivado.",
+        "Semilla flotante curó 2 HP a Clérigo",
+        `Mago Fuego infligió ${20 + Math.floor(Math.random()*20)} de daño a Sabueso de la Muerte.`,
+        "Clérigo curó 21 HP a Clérigo",
+        "Tirador infligió 15 de daño a Arquero No Muerto."
+      ];
+      addToCombatLog(logs[Math.floor(Math.random() * logs.length)]);
+
+      // Re-render log
+      const logEl = document.getElementById("combat-log");
+      if (logEl) logEl.innerHTML = gameData.combatLog.map(l => `<div class="mb-1">${l}</div>`).join('');
+      saveGame();
+      renderAll();
+    }
+
+    function addToCombatLog(text) {
+      gameData.combatLog.unshift(text);
+      if (gameData.combatLog.length > 12) gameData.combatLog.pop();
+    }
+
+    function retirarDungeon() {
+      if (confirm("¿Retirar del dungeon? El progreso se guarda.")) {
+        closeCombatView();
+      }
+    }
+
+    function closeCombatView() {
+      if (gameData.combatInterval) clearInterval(gameData.combatInterval);
+      gameData.currentCombatDungeonId = null;
+      gameData.activeTeam = []; // equipo se libera al salir
+      closeModal();
+      renderAll();
+    }
+
+    // ==================== OTRAS PESTAÑAS (mínimas) ====================
+    function renderIncursiones(container) {
+      container.innerHTML = `<h2 class="text-2xl font-bold mb-6">Incursiones</h2><p class="text-zinc-400 text-center py-12">Se desbloquean pronto...</p>`;
+    }
+
+    function showMercadoModal() { alert("Mercado completo próximamente"); }
+    function showTallerModal() { alert("Taller completo próximamente"); }
+    function showRefugioModal() { alert("Refugio completo próximamente"); }
+
+    function closeModal() {
+      renderAll();
+    }
+
+    function toggleMenu() {
+      alert("Menú lateral próximamente");
+    }
+
+    // ==================== INICIO ====================
+    loadGame();
+
+    // Auto-save
+    setInterval(saveGame, 15000);
+
+    // Progreso offline
+    window.addEventListener("load", () => {
+      const minutes = Math.floor((Date.now() - gameData.lastSave) / 60000);
+      if (minutes > 5 && gameData.currentCombatDungeonId) {
+        alert(`¡Bienvenido de vuelta! Avanzaste ${minutes * 8} pasos mientras estabas offline.`);
+      }
+      renderAll();
+    });
+
+    // Si es la primera vez, avisa que debe ir a Taberna
+    if (gameData.heroes.length === 0) {
+      console.log("%c✅ Juego limpio cargado. Ve a la Taberna para reclutar tu primer héroe.", "color:lime;font-weight:bold");
+    }
+  </script>
 </body>
 </html>

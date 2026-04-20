@@ -2,16 +2,16 @@
 let gameData = {
   gems: 15,
   silver: 2,
-  gold: 78,
+  gold: 128,
   currentTab: 0,
 
   buildings: {
-    cuartel: { level: 1, slots: 2 },
-    taberna: { level: 1 },
-    almacenamiento: { level: 1, dropBonus: 1 },
-    mercado: { level: 1 },
-    taller: { level: 1 },
-    refugio: { level: 1 }
+    cuartel: { level: 1, slots: 2, costGold: 150, costWood: 20 },
+    taberna: { level: 1, costGold: 200, costIron: 15 },
+    almacenamiento: { level: 1, dropBonus: 1, costGold: 120, costWood: 30 },
+    mercado: { level: 1, costGold: 450, costCopper: 40 }, // Muy caro como pediste
+    taller: { level: 1, costGold: 180, costIron: 25 },
+    refugio: { level: 1, costGold: 160, costWood: 25 }
   },
 
   heroes: [
@@ -20,11 +20,11 @@ let gameData = {
   ],
 
   dungeons: [
-    { id: 1, name: "Jungla Primigenia", progress: 0, max: 150, unlocked: true, bossDefeated: false }
+    { id: 1, name: "Jungla Primigenia", progress: 45, max: 150, unlocked: true, bossDefeated: false }
   ],
 
   materials: {
-    madera: 45, cobre: 23, hierro: 12, oro: 5
+    madera: 68, cobre: 45, hierro: 28, oroMat: 8
   },
 
   lastSave: Date.now()
@@ -34,23 +34,17 @@ let gameData = {
 function saveGame() {
   gameData.lastSave = Date.now();
   localStorage.setItem("dungeonIdleSave", JSON.stringify(gameData));
-  console.log("💾 Juego guardado");
 }
 
 function loadGame() {
   const saved = localStorage.getItem("dungeonIdleSave");
-  if (saved) {
-    gameData = JSON.parse(saved);
-    console.log("📂 Juego cargado");
-  }
+  if (saved) gameData = JSON.parse(saved);
   renderAll();
 }
 
 function changeTab(tab) {
   gameData.currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', i === tab);
-  });
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === tab));
   renderAll();
 }
 
@@ -63,96 +57,190 @@ function renderAll() {
   else if (gameData.currentTab === 2) renderDungeons(main);
   else if (gameData.currentTab === 3) renderIncursiones(main);
 
-  // Actualizar recursos
   document.getElementById("gems").textContent = gameData.gems;
   document.getElementById("silver").textContent = gameData.silver;
   document.getElementById("gold").textContent = gameData.gold;
 }
 
-// ==================== CUARTEL ====================
+// ==================== CUARTEL - MEJORAS ====================
 function renderCuartel(container) {
   let html = `<h2 class="text-2xl font-bold mb-6">Cuartel General</h2>`;
 
-  const buildingsList = [
-    { key: "cuartel", icon: "🏰", name: "CUARTELES", desc: `${gameData.heroes.length}/${gameData.buildings.cuartel.slots} aventureros` },
-    { key: "taberna", icon: "🍺", name: "TABERNA", desc: "2/2 invitados" },
-    { key: "almacenamiento", icon: "📦", name: "ALMACENAMIENTO", desc: `${Object.values(gameData.materials).reduce((a,b)=>a+b)} materiales` },
-    { key: "mercado", icon: "🛒", name: "MERCADO", desc: "0/2 vendidos" },
-    { key: "taller", icon: "🔨", name: "TALLER", desc: "0/1 completados" },
-    { key: "refugio", icon: "🐾", name: "REFUGIO", desc: "2/2 mascotas" }
-  ];
+  const buildingConfig = {
+    cuartel: { icon: "🏰", name: "CUARTELES", desc: `${gameData.heroes.length}/${gameData.buildings.cuartel.slots} aventureros` },
+    taberna: { icon: "🍺", name: "TABERNA", desc: "2/2 invitados" },
+    almacenamiento: { icon: "📦", name: "ALMACENAMIENTO", desc: `${Object.values(gameData.materials).reduce((a,b)=>a+b)} materiales (+${gameData.buildings.almacenamiento.dropBonus}% drop)` },
+    mercado: { icon: "🛒", name: "MERCADO", desc: "0/2 vendidos" },
+    taller: { icon: "🔨", name: "TALLER", desc: "0/1 completados" },
+    refugio: { icon: "🐾", name: "REFUGIO", desc: "2/2 mascotas" }
+  };
 
-  buildingsList.forEach(b => {
+  Object.keys(buildingConfig).forEach(key => {
+    const b = gameData.buildings[key];
+    const cfg = buildingConfig[key];
     html += `
-      <div onclick="improveBuilding('${b.key}')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl p-4 mb-3 flex gap-4 cursor-pointer">
-        <div class="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-3xl">${b.icon}</div>
+      <div onclick="improveBuilding('${key}')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-2xl p-4 mb-4 flex gap-4 cursor-pointer active:scale-95 transition">
+        <div class="w-14 h-14 bg-zinc-800 rounded-2xl flex items-center justify-center text-4xl">${cfg.icon}</div>
         <div class="flex-1">
-          <div class="font-bold">${b.name}</div>
-          <div class="text-zinc-400 text-sm">${b.desc}</div>
+          <div class="font-bold text-lg">${cfg.name} <span class="text-yellow-400 text-sm">Nv.${b.level}</span></div>
+          <div class="text-zinc-400 text-sm">${cfg.desc}</div>
         </div>
-        <div class="text-yellow-400 text-xl">↑</div>
+        <div class="text-right">
+          <div class="text-amber-400 text-xl">↑</div>
+          <div class="text-xs text-zinc-500 mt-1">Mejorar</div>
+        </div>
       </div>`;
   });
+
+  // Botón Reclamar Todo
+  html += `
+    <button onclick="claimAllMaterials()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold text-lg mt-6">
+      Reclamar Todo
+    </button>`;
 
   container.innerHTML = html;
 }
 
 function improveBuilding(key) {
-  alert(`Mejorando ${key.toUpperCase()}... (aquí irá el sistema de costo + materiales)`);
-  // Vamos a implementar el sistema completo en la próxima iteración
+  const b = gameData.buildings[key];
+  let costGold = b.costGold || 100;
+  let costMat = {};
+
+  if (key === "cuartel") costMat = { madera: b.level * 15 };
+  else if (key === "almacenamiento") costMat = { madera: b.level * 20 };
+  else if (key === "mercado") costMat = { cobre: b.level * 35 }; // Muy caro
+  else if (key === "taller" || key === "refugio") costMat = { hierro: b.level * 18 };
+  else costMat = { madera: b.level * 12 };
+
+  // Verificar si puede pagar
+  if (gameData.gold < costGold) {
+    alert("❌ Oro insuficiente");
+    return;
+  }
+  for (let mat in costMat) {
+    if (!gameData.materials[mat] || gameData.materials[mat] < costMat[mat]) {
+      alert(`❌ Falta ${mat}`);
+      return;
+    }
+  }
+
+  // Pagar y subir nivel
+  gameData.gold -= costGold;
+  Object.keys(costMat).forEach(m => gameData.materials[m] -= costMat[m]);
+
+  b.level++;
+
+  // Bonos específicos
+  if (key === "cuartel") b.slots++;
+  if (key === "almacenamiento") b.dropBonus += 1;
+
+  // Aumentar costo para próximo nivel
+  b.costGold = Math.floor(costGold * 1.6);
+
+  saveGame();
+  renderAll();
+  alert(`¡${key.toUpperCase()} mejorado a nivel ${b.level}!`);
 }
 
-// ==================== OTRAS PESTAÑAS (básicas por ahora) ====================
+function claimAllMaterials() {
+  const gained = Math.floor(Math.random() * 25) + 15;
+  gameData.materials.madera += gained;
+  alert(`¡Reclamaste ${gained} materiales!`);
+  saveGame();
+  renderAll();
+}
+
+// ==================== HÉROES (mejorado) ====================
 function renderHeroes(container) {
-  let html = `<h2 class="text-2xl font-bold mb-6">Aventureros</h2>`;
+  let html = `<h2 class="text-2xl font-bold mb-6">Aventureros (${gameData.heroes.length}/${gameData.buildings.cuartel.slots})</h2>`;
+  
   gameData.heroes.forEach(h => {
     html += `
-      <div onclick="showHeroModal(${h.id})" class="bg-zinc-900 border border-zinc-700 rounded-xl p-3 flex gap-3 mb-3 cursor-pointer">
-        <div class="w-14 h-14 bg-zinc-700 rounded-lg flex items-center justify-center text-4xl">🧙</div>
-        <div>
-          <div class="font-bold">${h.name} <span class="text-xs text-amber-400">${h.rarity}</span></div>
-          <div class="text-sm text-zinc-400">${h.class} • Nivel ${h.level}</div>
-          <div class="text-yellow-400 text-xs">Poder: ${h.power}</div>
+      <div onclick="showHeroModal(${h.id})" class="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 flex gap-4 mb-4 cursor-pointer">
+        <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-600 rounded-xl flex items-center justify-center text-5xl shadow-inner">🛡️</div>
+        <div class="flex-1">
+          <div class="font-bold">${h.name} <span class="text-xs px-2 py-0.5 bg-zinc-700 rounded">${h.rarity}</span></div>
+          <div class="text-emerald-400">${h.class} • Nv.${h.level}</div>
+          <div class="text-yellow-400">Poder: ${h.power}</div>
         </div>
       </div>`;
   });
+
   container.innerHTML = html;
 }
 
 function showHeroModal(id) {
-  alert("Modal de héroe con equipamiento (próxima iteración)");
+  const hero = gameData.heroes.find(h => h.id === id);
+  alert(`🧙 ${hero.name} (${hero.class})\nPoder: ${hero.power}\n\nEquipamiento: Próximamente 7 slots`);
 }
 
+// ==================== DUNGEONS & INCURSIONES (básico) ====================
 function renderDungeons(container) {
   let html = `<h2 class="text-2xl font-bold mb-6">Dungeons</h2>`;
   gameData.dungeons.forEach(d => {
+    const percent = Math.floor((d.progress / d.max) * 100);
     html += `
-      <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-4">
-        <div class="font-bold">${d.name}</div>
-        <div class="h-2 bg-zinc-800 rounded mt-2">
-          <div class="h-2 bg-yellow-400 rounded" style="width: ${(d.progress/d.max)*100}%"></div>
+      <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-5 mb-4">
+        <div class="font-bold text-lg">${d.name}</div>
+        <div class="h-3 bg-zinc-800 rounded-full mt-3 overflow-hidden">
+          <div class="h-3 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full" style="width: ${percent}%"></div>
         </div>
-        <div class="text-xs text-zinc-400 mt-1">${d.progress}/${d.max} pasos</div>
+        <div class="flex justify-between text-xs text-zinc-400 mt-1">
+          <span>${d.progress}/${d.max} pasos</span>
+          <span class="text-emerald-400">Progreso idle activo</span>
+        </div>
       </div>`;
   });
   container.innerHTML = html;
 }
 
 function renderIncursiones(container) {
-  container.innerHTML = `<h2 class="text-2xl font-bold mb-6">Incursiones</h2><p class="text-zinc-400">Se desbloquean con más poder de equipo...</p>`;
+  container.innerHTML = `
+    <h2 class="text-2xl font-bold mb-6">Incursiones</h2>
+    <div class="bg-zinc-900 border border-dashed border-zinc-600 rounded-3xl p-8 text-center">
+      <p class="text-zinc-400">Desbloquea con más poder de equipo</p>
+      <p class="text-5xl mt-6">⚡</p>
+    </div>`;
+}
+
+// ==================== EXPORT / IMPORT ====================
+function exportSave() {
+  const dataStr = JSON.stringify(gameData);
+  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+  const link = document.createElement('a');
+  link.href = dataUri;
+  link.download = 'dungeon-idle-save.json';
+  link.click();
+}
+
+function importSave() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = ev => {
+      gameData = JSON.parse(ev.target.result);
+      saveGame();
+      renderAll();
+      alert("✅ Progreso cargado correctamente");
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 // ==================== INICIO ====================
 loadGame();
-setInterval(() => {
-  saveGame();
-}, 30000); // auto-save cada 30 segundos
+setInterval(saveGame, 20000);
 
-// Offline progress (simple)
-window.addEventListener("load", () => {
-  const offlineTime = (Date.now() - gameData.lastSave) / 1000 / 60; // minutos
-  if (offlineTime > 5) {
-    alert(`¡Bienvenido de vuelta! Estuviste offline ${Math.floor(offlineTime)} minutos.`);
-    // Aquí calcularemos progreso offline después
-  }
-});
+// Progreso offline simple
+const offlineMin = Math.floor((Date.now() - gameData.lastSave) / 60000);
+if (offlineMin > 3) {
+  const extraGold = Math.floor(offlineMin * 1.2);
+  gameData.gold += extraGold;
+  alert(`¡Volviste después de ${offlineMin} minutos!\nGanaste +${extraGold} oro offline`);
+}
+
+// Agregar botones Export/Import en el menú (opcional por ahora)
